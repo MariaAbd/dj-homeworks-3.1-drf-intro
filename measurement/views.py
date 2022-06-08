@@ -1,41 +1,47 @@
 # TODO: опишите необходимые обработчики, рекомендуется использовать generics APIView классы:
 # TODO: ListCreateAPIView, RetrieveUpdateAPIView, CreateAPIView
-from rest_framework.decorators import api_view
 from rest_framework.generics import ListAPIView, RetrieveAPIView
 from rest_framework.response import Response
-from rest_framework.views import APIView
 
 from .models import Sensor, Measurement
-from .serializers import SensorSerializer, MeasurementSerializer
+from .serializers import SensorDetailSerializer, MeasurementsListSerializer, SensorsListSerialiser
 
 
-class SensorView(ListAPIView):
+class SensorsListView(ListAPIView):
     queryset = Sensor.objects.all()
-    serializer_class = SensorSerializer
+    serializer_class = SensorsListSerialiser
 
     def post(self, request):
-        return Response({'status': 'OK_sensor'})
+        data = request.data
+        one_sensor = Sensor.objects.create(name=data['name'], description=data['description'])
+        one_sensor.save()
+        ser = SensorDetailSerializer(one_sensor)
+        return Response(ser.data)
 
 
-class OneSensorView(RetrieveAPIView):
+class SensorDetailView(RetrieveAPIView):
     queryset = Sensor.objects.all()
-    serializer_class = SensorSerializer
+    serializer_class = SensorDetailSerializer
+
+    def patch(self, request, pk):
+        one_sensor = self.get_object()
+        data = request.data
+        one_sensor.name = data.get("name", one_sensor.name)
+        one_sensor.description = data.get("description", one_sensor.description)
+        one_sensor.save()
+        ser = SensorDetailSerializer(one_sensor)
+        return Response(ser.data)
 
 
-    # def patch(self, request):
-    #     one_sensor = Sensor.obgects.get()
-    #     data = request.data
-    #     one_sensor.name = data.get("name", one_sensor.name)
-    #     one_sensor.description = data.get("description", one_sensor.description)
-    #     one_sensor.save()
-    #     ser = SensorSerializer(one_sensor)
-    #     return Response(ser.data)
-
-
-
-class MeasurementView(ListAPIView):
+class MeasurementsListView(ListAPIView):
     queryset = Measurement.objects.all()
-    serializer_class = MeasurementSerializer
+    serializer_class = MeasurementsListSerializer
 
     def post(self, request):
-        return Response({'status': 'OK_measurement'})
+        data = request.data
+        sensor = Sensor.objects.get(id=data['sensor_id'])
+        one_measurement = Measurement.objects.create(sensor_id=sensor,
+                                                     temperature=data['temperature'])
+        one_measurement.save()
+        ser = MeasurementsListSerializer(one_measurement)
+        return Response(ser.data)
